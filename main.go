@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gorilla/handlers"
@@ -33,22 +34,27 @@ var (
 func main() {
 	r := mux.NewRouter()
 
-	// CORS setup
-	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
-	originsOk := handlers.AllowedOrigins([]string{"*"})
-	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
-
-	// Auth endpoints
-	r.HandleFunc("/auth/phantom", phantomAuthHandler).Methods("POST")
-	r.HandleFunc("/ai/session", createAISessionHandler).Methods("POST")
-	// Add to main.go
-	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+	// Root endpoint
+	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("Phantom Backend is running!"))
 	}).Methods("GET")
 
-	fmt.Println("Server running on :8080")
-	log.Fatal(http.ListenAndServe(":8080", handlers.CORS(originsOk, headersOk, methodsOk)(r)))
+	// Other endpoints
+	r.HandleFunc("/auth/phantom", phantomAuthHandler).Methods("POST")
+	r.HandleFunc("/ai/session", createAISessionHandler).Methods("POST")
+
+	// CORS and server setup
+	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type"})
+	originsOk := handlers.AllowedOrigins([]string{"*"})
+	methodsOk := handlers.AllowedMethods([]string{"GET", "POST"})
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080" // Fallback for local development
+	}
+
+	fmt.Printf("Server running on port %s\n", port)
+	log.Fatal(http.ListenAndServe(":"+port, handlers.CORS(originsOk, headersOk, methodsOk)(r)))
 }
 func phantomAuthHandler(w http.ResponseWriter, r *http.Request) {
 	var req struct {
