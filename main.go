@@ -34,27 +34,28 @@ var (
 func main() {
 	r := mux.NewRouter()
 
-	// Root endpoint
-	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Phantom Backend is running!"))
-	}).Methods("GET")
+	// CORS setup
+	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
+	originsOk := handlers.AllowedOrigins([]string{"*"})
+	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
 
-	// Other endpoints
+	// Auth endpoints
+	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("Phantom Backend is running"))
+	}).Methods("GET")
 	r.HandleFunc("/auth/phantom", phantomAuthHandler).Methods("POST")
 	r.HandleFunc("/ai/session", createAISessionHandler).Methods("POST")
-
-	// CORS and server setup
-	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type"})
-	originsOk := handlers.AllowedOrigins([]string{"*"})
-	methodsOk := handlers.AllowedMethods([]string{"GET", "POST"})
-
+	// Add to main.go
+	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	}).Methods("GET")
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080" // Fallback for local development
+		port = "8080"
 	}
-
-	fmt.Printf("Server running on port %s\n", port)
-	log.Fatal(http.ListenAndServe(":"+port, handlers.CORS(originsOk, headersOk, methodsOk)(r)))
+	fmt.Println("Server running on :8080")
+	log.Fatal(http.ListenAndServe(":8080", handlers.CORS(originsOk, headersOk, methodsOk)(r)))
 }
 func phantomAuthHandler(w http.ResponseWriter, r *http.Request) {
 	var req struct {
